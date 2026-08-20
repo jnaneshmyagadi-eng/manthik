@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DemoBanner } from "@/components/demo-banner";
 import { ContentActions } from "./content-actions";
+import { ContentStatusButtons } from "./content-status";
 
 export default async function ContentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -52,7 +53,7 @@ export default async function ContentPage({ params }: { params: Promise<{ id: st
                     <span className="text-[10px] text-amber-400/90">demo</span>
                   )}
                 </div>
-                <ContentItemControls projectId={id} itemId={c.id} status={c.status} />
+                <ContentStatusButtons projectId={id} itemId={c.id} status={c.status} />
               </div>
               <h2 className="mt-2 font-medium">{c.title || "Untitled"}</h2>
               {c.hook && <p className="mt-1 text-[var(--muted)] italic">{c.hook}</p>}
@@ -69,18 +70,3 @@ export default async function ContentPage({ params }: { params: Promise<{ id: st
     </div>
   );
 }
-
-function ContentItemControls({
-  projectId,
-  itemId,
-  status,
-}: {
-  projectId: string;
-  itemId: string;
-  status: string;
-}) {
-  return <ContentStatusButtons projectId={projectId} itemId={itemId} status={status} />;
-}
-
-// Client controls imported below
-import { ContentStatusButtons } from "./content-status";
