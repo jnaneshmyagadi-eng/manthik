@@ -1,14 +1,25 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseEnv } from "@/lib/supabase/config";
 
 export default async function AppHome() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!getSupabaseEnv()) {
+    redirect("/login?error=config");
+  }
+
+  let user = null;
+  try {
+    const supabase = await createClient();
+    const res = await supabase.auth.getUser();
+    user = res.data.user;
+  } catch {
+    redirect("/login?error=auth");
+  }
+
   if (!user) redirect("/login");
 
+  const supabase = await createClient();
   const { data: projects } = await supabase
     .from("projects")
     .select("id, name, main_goal, growth_score, status, created_at")
