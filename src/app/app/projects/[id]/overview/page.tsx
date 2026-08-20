@@ -35,7 +35,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ id: s
     <div>
       <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">{project.description || "No description"}</p>
-      <DemoBanner show={run?.data?.is_demo !== false} />
+      <DemoBanner show={run?.is_demo !== false} />
 
       <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
