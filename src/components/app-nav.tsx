@@ -12,6 +12,8 @@ const links = [
   { href: "strategy", label: "Strategy" },
   { href: "content", label: "Content" },
   { href: "experiments", label: "Experiments" },
+  { href: "conversion", label: "Conversion" },
+  { href: "memory", label: "Memory" },
   { href: "settings", label: "Settings" },
 ];
 
