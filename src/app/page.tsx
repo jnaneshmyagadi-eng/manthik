@@ -1,89 +1,108 @@
 import Link from "next/link";
+import { SiteHeader } from "@/components/landing/site-header";
+import { HeroGrowthCore } from "@/components/landing/hero-growth-core";
+import { GrowthFlow3D } from "@/components/landing/growth-flow-3d";
+import { DashboardPreview } from "@/components/landing/dashboard-preview";
+import { TodayPreview } from "@/components/landing/today-preview";
+import { OpportunityRadar } from "@/components/landing/opportunity-radar";
+import { CustomerSegments } from "@/components/landing/customer-segments";
+import { CompetitorMap } from "@/components/landing/competitor-map";
+import { GrowthLoop } from "@/components/landing/growth-loop";
+import { FinalCta } from "@/components/landing/final-cta";
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen">
-      <header className="border-b border-[var(--border)] px-4 sm:px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
-        <div className="font-semibold tracking-tight text-lg">Manthik</div>
-        <nav className="flex items-center gap-3 text-sm">
-          <Link href="/login" className="text-[var(--muted)] hover:text-[var(--foreground)]">
-            Log in
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-[var(--accent-fg)] font-medium"
-          >
-            Start Growing
-          </Link>
-        </nav>
-      </header>
+    <main className="min-h-screen overflow-x-hidden bg-[#050507] text-zinc-100">
+      <SiteHeader />
 
-      <section className="mx-auto max-w-3xl px-4 sm:px-6 pt-20 pb-16 text-center">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--muted)]">
-          AI Growth Operating System
-        </p>
-        <h1 className="mt-4 text-4xl sm:text-5xl font-semibold tracking-tight leading-tight">
-          Turn your product into customers.
-        </h1>
-        <p className="mt-6 text-lg text-[var(--muted)] leading-relaxed">
-          Manthik finds your best opportunities, builds your growth strategy, and tells you exactly
-          what to do next — every day.
-        </p>
-        <div className="mt-10 flex flex-col sm:flex-row justify-center gap-3">
-          <Link
-            href="/signup"
-            className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-medium text-[var(--accent-fg)]"
-          >
-            Start Growing
-          </Link>
-          <a
-            href="#how"
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium"
-          >
-            See How It Works
-          </a>
+      {/* Hero */}
+      <section className="manthik-grid relative border-b border-white/5">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-12 sm:px-6 sm:pb-20 sm:pt-16 lg:grid-cols-2 lg:gap-12">
+          <div className="text-center lg:text-left">
+            <p className="text-xs font-medium uppercase tracking-[0.22em] text-indigo-300/90">
+              AI Growth Operating System
+            </p>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight leading-[1.1] sm:text-5xl lg:text-[3.25rem]">
+              Turn your product into customers.
+            </h1>
+            <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-zinc-400 lg:mx-0">
+              Manthik finds your best opportunities, builds your growth strategy, and tells you exactly what to do
+              next — every day.
+            </p>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
+              <Link href="/signup" className="btn-primary w-full rounded-xl px-6 py-3.5 text-center text-sm font-medium sm:w-auto">
+                Start Growing
+              </Link>
+              <a
+                href="#how"
+                className="w-full rounded-xl border border-white/10 px-6 py-3.5 text-center text-sm font-medium text-zinc-300 transition hover:border-white/20 hover:text-white sm:w-auto"
+              >
+                See how it works
+              </a>
+            </div>
+            <p className="mt-6 text-xs text-zinc-600">
+              Not another chatbot — an AI growth team beside the founder.
+            </p>
+          </div>
+
+          <div className="flex justify-center lg:justify-end">
+            <HeroGrowthCore />
+          </div>
         </div>
       </section>
 
-      <section id="how" className="border-t border-[var(--border)] bg-[var(--card)]">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-16 grid gap-10 sm:grid-cols-3">
+      {/* Trust strip */}
+      <section className="border-b border-white/5 px-4 py-8 sm:px-6">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-8 gap-y-3 text-center text-[11px] uppercase tracking-wider text-zinc-600">
+          <span>Product intelligence</span>
+          <span className="hidden text-zinc-800 sm:inline">·</span>
+          <span>Ranked opportunities</span>
+          <span className="hidden text-zinc-800 sm:inline">·</span>
+          <span>Daily actions</span>
+          <span className="hidden text-zinc-800 sm:inline">·</span>
+          <span>Growth memory</span>
+        </div>
+      </section>
+
+      <div id="how">
+        <GrowthFlow3D />
+      </div>
+
+      <DashboardPreview />
+      <TodayPreview />
+      <OpportunityRadar />
+      <CustomerSegments />
+      <CompetitorMap />
+      <GrowthLoop />
+
+      {/* Short product pillars */}
+      <section className="border-t border-white/5 px-4 py-16 sm:px-6">
+        <div className="mx-auto grid max-w-5xl gap-6 sm:grid-cols-3">
           {[
             {
-              t: "Growth Intelligence",
-              d: "Product, customer, and competitor analysis so you know who to win and why.",
+              t: "Product Intelligence",
+              d: "Understand positioning, strengths, and conversion friction before you spend on channels.",
             },
             {
-              t: "Opportunity Engine",
-              d: "Ranked opportunities across channels by fit, effort, speed, and impact.",
+              t: "Content & Conversion",
+              d: "Drafts tied to opportunities, plus conversion score and CTA recommendations.",
             },
             {
-              t: "Daily Growth Agent",
-              d: "Open Manthik and know the exact 3–4 actions that move the needle today.",
+              t: "Growth Memory",
+              d: "Experiments and insights compound — so the next plan is smarter than the last.",
             },
-          ].map((item) => (
-            <div key={item.t}>
-              <h3 className="font-medium">{item.t}</h3>
-              <p className="mt-2 text-sm text-[var(--muted)] leading-relaxed">{item.d}</p>
+          ].map((x) => (
+            <div key={x.t} className="card-hover glass rounded-2xl p-5">
+              <h3 className="text-sm font-medium">{x.t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{x.d}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-3xl px-4 sm:px-6 py-16 text-center">
-        <h2 className="text-2xl font-semibold tracking-tight">Not another chatbot.</h2>
-        <p className="mt-4 text-[var(--muted)]">
-          Manthik behaves like a smart growth team sitting beside the founder — prioritised, actionable,
-          and measurable.
-        </p>
-        <Link
-          href="/signup"
-          className="mt-8 inline-block rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-medium text-[var(--accent-fg)]"
-        >
-          Create your first Growth Project
-        </Link>
-      </section>
+      <FinalCta />
 
-      <footer className="border-t border-[var(--border)] py-8 text-center text-xs text-[var(--muted)]">
+      <footer className="border-t border-white/5 py-10 text-center text-xs text-zinc-600">
         © {new Date().getFullYear()} Manthik · AI Growth Operating System
       </footer>
     </main>
