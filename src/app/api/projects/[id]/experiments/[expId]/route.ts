@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { writeGrowthMemory } from "@/lib/intelligence/memory";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -51,7 +52,6 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Write-back to growth memory on completed experiments
   if (data && (data.status === "completed" || data.status === "failed")) {
     const { data: project } = await supabase
       .from("projects")
@@ -59,7 +59,7 @@ export async function PATCH(
       .eq("id", id)
       .single();
     const memory = (project?.memory as Record<string, unknown>) || {};
-    const experiments = Array.isArray(memory.experiments) ? memory.experiments : [];
+    const experiments = Array.isArray(memory.experiments) ? [...(memory.experiments as unknown[])] : [];
     experiments.push({
       id: data.id,
       name: data.name,
@@ -75,6 +75,20 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
+
+    try {
+      await writeGrowthMemory(id, {
+        type: "experiment_result",
+        title: `Experiment: ${data.name}`,
+        detail: `Result: ${data.result || data.status}${data.channel ? ` · ${data.channel}` : ""}`,
+        channel: data.channel,
+        outcome:
+          data.result === "win" ? "success" : data.result === "loss" ? "fail" : "neutral",
+        meta: { experiment_id: data.id, result: data.result },
+      });
+    } catch (e) {
+      console.error("experiment memory write failed", e);
+    }
   }
 
   return NextResponse.json({ experiment: data });
