@@ -8,6 +8,15 @@ import {
   demoStrategy,
 } from "./demo-intelligence";
 import { isLiveAI } from "./provider";
+import { fetchPageSignals } from "@/lib/intelligence/fetch-page";
+import {
+  analyzeFromPage,
+  deriveSegments,
+  deriveCompetitorsFromPage,
+  deriveOpportunities,
+  deriveDailyTasks,
+  deriveStrategy,
+} from "@/lib/intelligence/analyze-product";
 
 export type ProjectInput = {
   id: string;
@@ -20,14 +29,97 @@ export type ProjectInput = {
 
 /**
  * GrowthOrchestrator — runs the intelligence pipeline.
- * Demo mode when no AI key; live mode later with same interface.
+ * When product_url is present: live page fetch + structured analysis.
+ * Demo generators only when no URL and no page data.
  */
 export async function runFullIntelligence(project: ProjectInput) {
   const supabase = await createClient();
-  const demo = !isLiveAI();
+  const liveAI = isLiveAI();
+  let usedDemo = false;
+  let analysisSource = "demo";
 
-  // 1. Product Intelligence
-  const product = demoProductIntelligence(project);
+  let product: ReturnType<typeof demoProductIntelligence> & {
+    category?: string | null;
+    raw_analysis?: Record<string, unknown>;
+  };
+  let segments: ReturnType<typeof demoCustomerSegments>;
+  let competitors: ReturnType<typeof demoCompetitors>;
+  let opps: ReturnType<typeof demoOpportunities>;
+  let strategy: ReturnType<typeof demoStrategy>;
+  let tasks: ReturnType<typeof demoDailyTasks>;
+
+  if (project.product_url) {
+    const signals = await fetchPageSignals(project.product_url);
+    const analysis = analyzeFromPage(signals, {
+      name: project.name,
+      description: project.description,
+      target_market: project.target_market,
+      main_goal: project.main_goal,
+    });
+    analysisSource = analysis.source;
+    usedDemo = analysis.source === "demo";
+
+    product = {
+      summary: analysis.summary,
+      strengths: analysis.strengths,
+      weaknesses: analysis.weaknesses,
+      positioning: analysis.positioning,
+      conversion_problems: analysis.conversion_problems,
+      opportunities: analysis.opportunities,
+      confidence: analysis.confidence,
+      source: analysis.source as "demo",
+      category: analysis.category,
+      raw_analysis: {
+        ...analysis.raw,
+        cta: analysis.cta,
+        pricing_public: analysis.pricing_public,
+        target_audience_signals: analysis.target_audience_signals,
+        fetch_ok: signals.ok,
+        fetch_error: signals.error || null,
+      },
+    };
+
+    segments = deriveSegments(analysis, project) as unknown as ReturnType<
+      typeof demoCustomerSegments
+    >;
+    competitors = deriveCompetitorsFromPage(analysis, project.name) as unknown as ReturnType<
+      typeof demoCompetitors
+    >;
+    opps = deriveOpportunities(analysis, project) as unknown as ReturnType<
+      typeof demoOpportunities
+    >;
+    strategy = deriveStrategy(analysis, opps as unknown as Parameters<typeof deriveStrategy>[1], project) as unknown as ReturnType<
+      typeof demoStrategy
+    >;
+    tasks = deriveDailyTasks(
+      analysis,
+      opps as unknown as Parameters<typeof deriveDailyTasks>[1],
+      project
+    ) as unknown as ReturnType<typeof demoDailyTasks>;
+  } else {
+    usedDemo = true;
+    product = demoProductIntelligence({
+      name: project.name,
+      url: project.product_url,
+      description: project.description,
+      goal: project.main_goal,
+    });
+    segments = demoCustomerSegments(project);
+    competitors = demoCompetitors(project);
+    opps = demoOpportunities({ name: project.name, goal: project.main_goal });
+    strategy = demoStrategy({ name: project.name, goal: project.main_goal });
+    tasks = demoDailyTasks({ name: project.name, goal: project.main_goal });
+  }
+
+  // Clear prior generated intel for re-runs (same project)
+  await supabase.from("growth_tasks").delete().eq("project_id", project.id);
+  await supabase.from("daily_plans").delete().eq("project_id", project.id);
+  await supabase.from("opportunities").delete().eq("project_id", project.id);
+  await supabase.from("growth_strategies").delete().eq("project_id", project.id);
+  await supabase.from("competitors").delete().eq("project_id", project.id);
+  await supabase.from("customer_segments").delete().eq("project_id", project.id);
+  await supabase.from("product_intelligence").delete().eq("project_id", project.id);
+
   await supabase.from("product_intelligence").insert({
     project_id: project.id,
     summary: product.summary,
@@ -38,10 +130,9 @@ export async function runFullIntelligence(project: ProjectInput) {
     opportunities: product.opportunities,
     confidence: product.confidence,
     source: product.source,
+    raw_analysis: product.raw_analysis || null,
   });
 
-  // 2. Customer segments
-  const segments = demoCustomerSegments(project);
   for (const s of segments) {
     await supabase.from("customer_segments").insert({
       project_id: project.id,
@@ -60,8 +151,6 @@ export async function runFullIntelligence(project: ProjectInput) {
     });
   }
 
-  // 3. Competitors
-  const competitors = demoCompetitors(project);
   for (const c of competitors) {
     await supabase.from("competitors").insert({
       project_id: project.id,
@@ -79,8 +168,6 @@ export async function runFullIntelligence(project: ProjectInput) {
     });
   }
 
-  // 4. Opportunities
-  const opps = demoOpportunities(project);
   for (const o of opps) {
     await supabase.from("opportunities").insert({
       project_id: project.id,
@@ -104,8 +191,6 @@ export async function runFullIntelligence(project: ProjectInput) {
     });
   }
 
-  // 5. Strategy
-  const strategy = demoStrategy(project);
   await supabase.from("growth_strategies").insert({
     project_id: project.id,
     goal: strategy.goal,
@@ -117,19 +202,19 @@ export async function runFullIntelligence(project: ProjectInput) {
     source: strategy.source,
   });
 
-  // 6. Today's plan + tasks
   const today = new Date().toISOString().slice(0, 10);
   const { data: plan } = await supabase
     .from("daily_plans")
     .insert({
       project_id: project.id,
       plan_date: today,
-      summary: `Focus on positioning clarity and high-signal distribution for ${project.name}.`,
+      summary: tasks[0]
+        ? `Today: ${tasks[0].title}`
+        : `Growth plan for ${project.name}`,
     })
     .select("id")
     .single();
 
-  const tasks = demoDailyTasks(project);
   for (const t of tasks) {
     await supabase.from("growth_tasks").insert({
       project_id: project.id,
@@ -147,20 +232,45 @@ export async function runFullIntelligence(project: ProjectInput) {
     });
   }
 
-  // Update project score (demo baseline)
+  const score = Math.round(
+    30 +
+      (product.confidence || 0.4) * 40 +
+      Math.min(opps.length, 5) * 4 +
+      (competitors.length ? 5 : 0)
+  );
+
   await supabase
     .from("projects")
-    .update({ growth_score: 42, status: "active", updated_at: new Date().toISOString() })
+    .update({
+      growth_score: Math.min(score, 92),
+      status: "active",
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", project.id);
 
   await supabase.from("ai_runs").insert({
     project_id: project.id,
     agent: "GrowthOrchestrator",
     status: "completed",
-    is_demo: demo,
-    output: { mode: demo ? "demo" : "live", agents: ["Product", "Customer", "Competitor", "Opportunity", "Strategy", "Daily"] },
+    is_demo: usedDemo && !project.product_url,
+    output: {
+      mode: project.product_url ? "page-analysis" : usedDemo ? "demo" : "live",
+      source: analysisSource,
+      liveAI,
+      agents: ["Product", "Customer", "Competitor", "Opportunity", "Strategy", "Daily"],
+      competitors_found: competitors.length,
+    },
     completed_at: new Date().toISOString(),
   });
 
-  return { demo };
+  await supabase.from("ai_insights").insert({
+    project_id: project.id,
+    category: "product_intelligence",
+    title: project.product_url ? "Live page analysis completed" : "Demo intelligence generated",
+    body: product.summary.slice(0, 500),
+    priority: 1,
+    metadata: { source: analysisSource },
+  });
+
+  return { demo: usedDemo && !project.product_url, source: analysisSource };
 }

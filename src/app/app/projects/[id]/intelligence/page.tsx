@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DemoBanner } from "@/components/demo-banner";
+import { RerunIntelligence } from "./rerun-intelligence";
 
 export default async function IntelligencePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,7 +11,11 @@ export default async function IntelligencePage({ params }: { params: Promise<{ i
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: project } = await supabase.from("projects").select("id, name").eq("id", id).single();
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, name, product_url")
+    .eq("id", id)
+    .single();
   if (!project) notFound();
 
   const [{ data: product }, { data: segments }, { data: competitors }] = await Promise.all([
@@ -26,14 +31,34 @@ export default async function IntelligencePage({ params }: { params: Promise<{ i
   ]);
 
   const isDemo = product?.source === "demo" || !product;
+  const isFailed = product?.source === "failed";
+  const isPage = product?.source === "page" || product?.source === "page+heuristic";
+  const raw = (product?.raw_analysis || {}) as Record<string, unknown>;
 
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Intelligence</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">Product · Customers · Competitors</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Intelligence</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">Product · Customers · Competitors</p>
+          {project.product_url && (
+            <p className="mt-1 text-xs text-[var(--muted)] break-all">{project.product_url}</p>
+          )}
+        </div>
+        <RerunIntelligence projectId={id} />
       </div>
+
       <DemoBanner show={isDemo} />
+      {isPage && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+          Live page analysis — signals extracted from the public website (not invented demo copy).
+        </div>
+      )}
+      {isFailed && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+          Page fetch failed. Check the URL is public and reachable, then re-run intelligence.
+        </div>
+      )}
 
       <section>
         <h2 className="text-sm font-medium uppercase tracking-wide text-[var(--muted)]">Product</h2>
@@ -48,6 +73,36 @@ export default async function IntelligencePage({ params }: { params: Promise<{ i
               <h3 className="text-xs text-[var(--muted)] uppercase">Positioning</h3>
               <p className="mt-1">{product.positioning}</p>
             </div>
+            <List title="Conversion problems" items={(product.conversion_problems as string[]) || []} />
+            {raw.title != null && (
+              <div className="rounded-lg border border-[var(--border)] bg-black/20 p-3 text-xs text-[var(--muted)] space-y-1">
+                <div>
+                  <span className="text-[var(--foreground)]">Title:</span> {String(raw.title)}
+                </div>
+                {Array.isArray(raw.h1) && raw.h1.length > 0 && (
+                  <div>
+                    <span className="text-[var(--foreground)]">H1:</span> {(raw.h1 as string[]).join(" · ")}
+                  </div>
+                )}
+                {Array.isArray(raw.ctas) && (raw.ctas as string[]).length > 0 && (
+                  <div>
+                    <span className="text-[var(--foreground)]">CTAs:</span>{" "}
+                    {(raw.ctas as string[]).slice(0, 5).join(", ")}
+                  </div>
+                )}
+                {raw.pricing_public != null && String(raw.pricing_public) && (
+                  <div>
+                    <span className="text-[var(--foreground)]">Pricing signals:</span>{" "}
+                    {String(raw.pricing_public)}
+                  </div>
+                )}
+                {raw.wordCount != null && (
+                  <div>
+                    <span className="text-[var(--foreground)]">Words:</span> {String(raw.wordCount)}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <Empty />
@@ -96,7 +151,13 @@ export default async function IntelligencePage({ params }: { params: Promise<{ i
               </div>
             </div>
           ))}
-          {!competitors?.length && <Empty />}
+          {!competitors?.length && (
+            <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-sm text-[var(--muted)]">
+              No competitors extracted from the page. Manthik does not invent competitor lists.
+              Mentions of “vs” / “alternative to” on your site are captured when present. A SERP API
+              can be added later for discovery.
+            </div>
+          )}
         </div>
       </section>
     </div>
@@ -120,7 +181,7 @@ function List({ title, items }: { title: string; items: string[] }) {
 function Empty() {
   return (
     <div className="mt-3 rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">
-      No data yet. Complete onboarding to generate intelligence.
+      No data yet. Complete onboarding with a product URL to run live analysis.
     </div>
   );
 }
